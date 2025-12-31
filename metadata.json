@@ -1,0 +1,8 @@
+{
+  "name": "BoldScholar Library",
+  "description": "A high-end, production-ready document and media management platform featuring secure cloud sync, intelligent analysis, and premium Material You design.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
