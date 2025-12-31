@@ -7,13 +7,17 @@ import {
   Image as ImageIcon,
   ChevronRight,
   RefreshCw,
-  Cloud
+  Cloud,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AppSection } from '../types';
 
 const Dashboard: React.FC = () => {
   const { user, setActiveSection, state, fetchCloudData } = useAppContext();
+
+  const isConfigured = !state.lastSyncTime?.includes("error");
 
   return (
     <div className="p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -86,19 +90,30 @@ const Dashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* Sync Status Info */}
-      <div className="bg-slate-900 rounded-[32px] p-6 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 blur-3xl rounded-full translate-x-10 -translate-y-10" />
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-white/10 rounded-xl">
-            <Cloud className="w-5 h-5 text-indigo-400" />
+      {/* Connection Status Info */}
+      <div className={`rounded-[32px] p-6 text-white relative overflow-hidden transition-colors ${isConfigured ? 'bg-slate-900' : 'bg-amber-600'}`}>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl rounded-full translate-x-10 -translate-y-10" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/10 rounded-xl">
+              <Cloud className="w-5 h-5 text-white" />
+            </div>
+            <h4 className="text-lg font-bold">Cloud Connectivity</h4>
           </div>
-          <h4 className="text-lg font-bold">Cloud Sync Status</h4>
+          {state.isSyncing ? (
+            <RefreshCw className="w-4 h-4 animate-spin text-white/50" />
+          ) : isConfigured ? (
+            <CheckCircle className="w-5 h-5 text-emerald-400" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-amber-200" />
+          )}
         </div>
-        <p className="text-slate-400 text-sm leading-relaxed">
-          {state.lastSyncTime 
-            ? `Last synchronized: ${new Date(state.lastSyncTime).toLocaleTimeString()}`
-            : 'Synchronizing with cloud storage...'}
+        <p className="text-white/70 text-sm leading-relaxed">
+          {state.isSyncing 
+            ? 'Establishing secure link...' 
+            : state.lastSyncTime 
+              ? `Connected: ${new Date(state.lastSyncTime).toLocaleTimeString()}`
+              : 'App is currently in local-only mode. Finish Firebase setup to enable cloud syncing.'}
         </p>
       </div>
     </div>
