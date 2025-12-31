@@ -38,7 +38,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastDiscoveryTime: null
   });
 
-  // Fetch data on login or app start
   useEffect(() => {
     const storedUser = localStorage.getItem('scholar_user');
     if (storedUser) {
@@ -51,17 +50,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsInitialized(true);
   }, []);
 
-  // Background Media Watcher Loop
   useEffect(() => {
     let interval: number;
     if (state.autoSyncEnabled && user && permissionsGranted) {
-      // Discover new media every 30 seconds while app is active
       interval = window.setInterval(() => {
         discoverAndUploadNewMedia();
       }, 30000);
     }
     return () => clearInterval(interval);
   }, [state.autoSyncEnabled, user, permissionsGranted]);
+
+  /**
+   * INTEGRATION POINT: Google Drive API
+   * In a production environment, this function would use 'gapi.client.drive.files.create'
+   * or a multipart POST request to https://www.googleapis.com/upload/drive/v3/files
+   */
+  const performDriveUpload = async (fileData: any, metadata: any, onProgress: (p: number) => void) => {
+    // REAL API CALL PSEUDOCODE:
+    // const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    //   method: 'POST',
+    //   headers: { Authorization: `Bearer ${user?.accessToken}` },
+    //   body: formBody
+    // });
+    
+    // MOCK FOR DEV:
+    for (let i = 0; i <= 100; i += 10) {
+      await new Promise(r => setTimeout(r, 200));
+      onProgress(i);
+    }
+    return `drive-id-${Math.random().toString(36).substr(2, 9)}`;
+  };
 
   const toggleAutoSync = () => {
     const newVal = !state.autoSyncEnabled;
@@ -71,10 +89,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const discoverAndUploadNewMedia = useCallback(async () => {
     if (state.isSyncing) return;
-    
-    // In a real mobile app, this would use a native bridge to scan folders.
-    // Here we simulate discovering 1-2 "new" items from the device storage.
-    console.log("[ScholarWatcher] Scanning for new mobile media...");
     
     const sources: ('gallery' | 'whatsapp' | 'instagram' | 'snapchat')[] = ['gallery', 'whatsapp', 'instagram', 'snapchat'];
     const randomSource = sources[Math.floor(Math.random() * sources.length)];
@@ -95,21 +109,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastDiscoveryTime: new Date().toISOString() 
     }));
 
-    // Simulate Background Upload to Google Drive + Firebase Meta update
-    for (let i = 0; i <= 100; i += 25) {
-      await new Promise(r => setTimeout(r, 800));
+    // Trigger the actual (mocked) Drive Upload
+    const driveId = await performDriveUpload(null, { name: newItem.id }, (p) => {
       setState(prev => ({
         ...prev,
-        media: prev.media.map(m => m.id === newItem.id ? { ...m, progress: i } : m)
+        media: prev.media.map(m => m.id === newItem.id ? { ...m, progress: p } : m)
       }));
-    }
+    });
 
+    // Update state once "Drive" confirms success
     setState(prev => ({
       ...prev,
       media: prev.media.map(m => m.id === newItem.id ? { 
         ...m, 
         syncStatus: 'synced', 
-        driveFileId: `drive-${newItem.id}` 
+        driveFileId: driveId 
       } : m)
     }));
   }, [state.isSyncing]);
@@ -118,9 +132,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targetUid = uid || user?.uid;
     if (!targetUid) return;
     setState(prev => ({ ...prev, isSyncing: true }));
+    
+    // INTEGRATION POINT: Firebase Firestore
+    // Here we would call: getDocs(collection(db, "users", targetUid, "media"))
     await new Promise(r => setTimeout(r, 1000));
     
-    // Simulate real-time retrieval from Firebase
     const cloudMedia: MediaItem[] = Array.from({ length: 6 }).map((_, i) => ({
       id: `cloud-m-${i}`,
       driveFileId: `drive-vid-${i}`,
@@ -140,6 +156,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const loginWithGoogle = async () => {
+    // INTEGRATION POINT: Firebase Auth
+    // const result = await signInWithPopup(auth, googleProvider);
     const mockGoogleUser: UserProfile = {
       uid: 'google-uid-123',
       name: 'Scholar User',
@@ -173,12 +191,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       progress: 0,
       category
     };
+    
     setState(prev => ({ ...prev, files: [newFile, ...prev.files] }));
-    for (let i = 0; i <= 100; i += 20) {
-      await new Promise(r => setTimeout(r, 300));
-      setState(prev => ({ ...prev, files: prev.files.map(f => f.id === fileId ? { ...f, progress: i } : f) }));
-    }
-    setState(prev => ({ ...prev, files: prev.files.map(f => f.id === fileId ? { ...f, syncStatus: 'synced', driveFileId: `drive-${fileId}` } : f) }));
+    
+    const driveId = await performDriveUpload(file, { name: file.name }, (p) => {
+      setState(prev => ({ ...prev, files: prev.files.map(f => f.id === fileId ? { ...f, progress: p } : f) }));
+    });
+
+    setState(prev => ({ ...prev, files: prev.files.map(f => f.id === fileId ? { ...f, syncStatus: 'synced', driveFileId: driveId } : f) }));
   };
 
   const analyzeFile = async (fileName: string) => {
