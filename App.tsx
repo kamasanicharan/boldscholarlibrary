@@ -1,12 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   BookOpen, 
   User as UserIcon, 
   Settings, 
-  Cloud, 
   LogOut,
-  ChevronRight
+  ChevronRight,
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { AppSection } from './types';
@@ -20,7 +21,7 @@ import Login from './components/Login';
 import Navigation from './components/Navigation';
 
 const AppContent: React.FC = () => {
-  const { state, activeSection, setActiveSection, user, logout } = useAppContext();
+  const { state, activeSection, setActiveSection, user, logout, toggleAutoSync } = useAppContext();
   const [showProfile, setShowProfile] = useState(false);
 
   if (!user) {
@@ -29,16 +30,11 @@ const AppContent: React.FC = () => {
 
   const renderSection = () => {
     switch (activeSection) {
-      case AppSection.DASHBOARD:
-        return <Dashboard />;
-      case AppSection.CS:
-        return <CSSection />;
-      case AppSection.MASTERY:
-        return <MasterySection />;
-      case AppSection.MEDIA:
-        return <MediaSection />;
-      default:
-        return <Dashboard />;
+      case AppSection.DASHBOARD: return <Dashboard />;
+      case AppSection.CS: return <CSSection />;
+      case AppSection.MASTERY: return <MasterySection />;
+      case AppSection.MEDIA: return <MediaSection />;
+      default: return <Dashboard />;
     }
   };
 
@@ -59,7 +55,7 @@ const AppContent: React.FC = () => {
             onClick={() => setShowProfile(!showProfile)}
             className="w-10 h-10 rounded-full border-2 border-indigo-50 overflow-hidden shadow-sm active:scale-95 transition-transform"
           >
-            <img src={user.avatar || `https://picsum.photos/seed/${user.email}/100/100`} alt="Avatar" className="w-full h-full object-cover" />
+            <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
           </button>
         </div>
       </header>
@@ -77,42 +73,48 @@ const AppContent: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-end justify-center">
           <div className="w-full max-w-md bg-white rounded-t-[40px] p-8 shadow-2xl transform transition-transform duration-300 animate-in slide-in-from-bottom-full">
             <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-8" onClick={() => setShowProfile(false)} />
+            
             <div className="flex flex-col items-center mb-8">
-              <div className="relative mb-4">
-                <img src={user.avatar || `https://picsum.photos/seed/${user.email}/100/100`} className="w-24 h-24 rounded-[32px] object-cover shadow-2xl" />
-                <div className="absolute -bottom-2 -right-2 p-2 bg-indigo-600 rounded-2xl text-white shadow-xl">
-                  <Settings className="w-4 h-4" />
-                </div>
-              </div>
+              <img src={user.avatar} className="w-24 h-24 rounded-[32px] object-cover shadow-2xl mb-4" />
               <h2 className="text-2xl font-extrabold text-slate-800">{user.name}</h2>
               <p className="text-slate-500 text-sm font-medium">{user.email}</p>
             </div>
             
             <div className="space-y-3">
+              <div className="w-full p-4 flex items-center justify-between rounded-3xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-2xl bg-amber-100 text-amber-600"><Zap className="w-5 h-5" /></div>
+                  <div>
+                    <span className="block font-bold text-slate-700 text-base">Auto-Sync Media</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Background Watcher</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={toggleAutoSync}
+                  className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${state.autoSyncEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${state.autoSyncEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+
               <button className="w-full p-4 flex items-center justify-between rounded-3xl bg-slate-50 hover:bg-indigo-50 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-600"><UserIcon className="w-5 h-5" /></div>
+                  <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-600"><Settings className="w-5 h-5" /></div>
                   <span className="font-bold text-slate-700 text-base">Account Settings</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-slate-300" />
               </button>
+
               <button 
                 onClick={logout}
                 className="w-full p-4 flex items-center gap-3 rounded-3xl text-red-600 hover:bg-red-50 transition-colors mt-4"
               >
-                <div className="p-3 rounded-2xl bg-red-50 text-red-600">
-                  <LogOut className="w-5 h-5" />
-                </div>
+                <div className="p-3 rounded-2xl bg-red-50 text-red-600"><LogOut className="w-5 h-5" /></div>
                 <span className="font-bold text-base">Logout</span>
               </button>
             </div>
             
-            <button 
-              onClick={() => setShowProfile(false)}
-              className="w-full py-6 mt-4 font-bold text-slate-400"
-            >
-              Close
-            </button>
+            <button onClick={() => setShowProfile(false)} className="w-full py-6 mt-4 font-bold text-slate-400">Close</button>
           </div>
         </div>
       )}

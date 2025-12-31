@@ -5,26 +5,37 @@ import {
   Plus,
   BookOpen,
   Image as ImageIcon,
-  ChevronRight
+  ChevronRight,
+  RefreshCw,
+  Cloud
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AppSection } from '../types';
 
 const Dashboard: React.FC = () => {
-  const { user, setActiveSection } = useAppContext();
+  const { user, setActiveSection, state, fetchCloudData } = useAppContext();
 
   return (
     <div className="p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Welcome Section */}
-      <section className="pt-4">
-        <h2 className="text-4xl font-black text-slate-800 leading-tight tracking-tight">
-          Hello, <br />
-          <span className="text-indigo-600">{user?.name.split(' ')[0]}</span>
-        </h2>
-        <p className="text-slate-500 mt-2 font-semibold text-base">Your digital library is ready.</p>
+      <section className="pt-4 flex justify-between items-start">
+        <div>
+          <h2 className="text-4xl font-black text-slate-800 leading-tight tracking-tight">
+            Hello, <br />
+            <span className="text-indigo-600">{user?.name.split(' ')[0]}</span>
+          </h2>
+          <p className="text-slate-500 mt-2 font-semibold text-base">Your digital library is ready.</p>
+        </div>
+        <button 
+          onClick={fetchCloudData}
+          disabled={state.isSyncing}
+          className="p-4 bg-white rounded-3xl border border-slate-100 shadow-sm text-slate-400 active:scale-90 transition-all disabled:opacity-50"
+        >
+          <RefreshCw className={`w-6 h-6 ${state.isSyncing ? 'animate-spin text-indigo-600' : ''}`} />
+        </button>
       </section>
 
-      {/* Main Navigation Grid - Mobile Optimized */}
+      {/* Main Navigation Grid */}
       <div className="grid grid-cols-1 gap-4">
         <button 
           onClick={() => setActiveSection(AppSection.CS)}
@@ -36,7 +47,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-left">
               <span className="block font-bold text-slate-800 text-lg">CS Library</span>
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Resources</span>
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{state.files.filter(f => f.category === 'CS').length} Resources</span>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-600 transition-colors" />
@@ -52,7 +63,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-left">
               <span className="block font-bold text-slate-800 text-lg">Mastery Vault</span>
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Deep Study</span>
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{state.files.filter(f => f.category === 'MASTERY').length} Items</span>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-violet-600 transition-colors" />
@@ -68,19 +79,27 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-left">
               <span className="block font-bold text-slate-800 text-lg">Media Vault</span>
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Encrypted Sync</span>
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{state.media.length} Photos</span>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-600 transition-colors" />
         </button>
       </div>
 
-      {/* Simple Status Bar */}
-      <div className="pt-4">
-        <div className="bg-slate-100/50 rounded-3xl p-4 flex items-center justify-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Secure Cloud Connection Active</span>
+      {/* Sync Status Info */}
+      <div className="bg-slate-900 rounded-[32px] p-6 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 blur-3xl rounded-full translate-x-10 -translate-y-10" />
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-white/10 rounded-xl">
+            <Cloud className="w-5 h-5 text-indigo-400" />
+          </div>
+          <h4 className="text-lg font-bold">Cloud Sync Status</h4>
         </div>
+        <p className="text-slate-400 text-sm leading-relaxed">
+          {state.lastSyncTime 
+            ? `Last synchronized: ${new Date(state.lastSyncTime).toLocaleTimeString()}`
+            : 'Synchronizing with cloud storage...'}
+        </p>
       </div>
     </div>
   );

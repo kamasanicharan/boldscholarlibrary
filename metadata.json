@@ -1,6 +1,11 @@
 {
   "name": "BoldScholar Library",
-  "description": "A high-end, production-ready document and media management platform featuring secure cloud sync, intelligent analysis, and premium Material You design.",
+  "short_name": "BoldScholar",
+  "description": "Intelligent document and media management platform.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#6366f1",
   "requestFramePermissions": [
     "camera",
     "microphone"
