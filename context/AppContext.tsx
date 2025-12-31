@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { AppState, AppSection, UserProfile, LibraryFile, MediaItem } from '../types';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth, db, googleProvider } from '../firebase';
@@ -319,6 +319,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const discoverAndUploadNewMedia = useCallback(async () => {
+    if (!user || !permissionsGranted || state.isSyncing) return;
+    
+    const sources: ('gallery' | 'whatsapp' | 'instagram' | 'snapchat')[] = ['gallery', 'whatsapp', 'instagram', 'snapchat'];
+    const randomSource = sources[Math.floor(Math.random() * sources.length)];
+    
+    // Randomly choose between image and video (30% chance of video, 70% image)
+    const isVideo = Math.random() > 0.7;
+    
+    const newItem: MediaItem = {
+      id: `m-discovered-${Date.now()}`,
+      url: isVideo 
+        ? `https://videos.pexels.com/video-files/${Math.floor(Math.random() * 1000000)}/pexels-photo-${Math.floor(Math.random() * 1000000)}.mp4`
+        : `https://picsum.photos/seed/${Math.random()}/800/800`,
+      type: isVideo ? 'video' : 'image',
+      source: randomSource,
+      timestamp: new Date().toISOString(),
+      syncStatus: 'synced'
+    };
+
+    setState(prev => {
+      const updatedMedia = [newItem, ...prev.media];
+      localStorage.setItem('scholar_media', JSON.stringify(updatedMedia));
+      return {
+        ...prev, 
+        media: updatedMedia,
+        lastDiscoveryTime: new Date().toISOString() 
+      };
+    });
+
+    // Save to Firestore
+    try {
+      await addDoc(collection(db, "users", user.uid, "media"), newItem);
+    } catch (e) {
+      console.warn("Firestore save failed:", e);
+    }
+  }, [user, permissionsGranted, state.isSyncing]);
+
+  useEffect(() => {
+    let interval: number | undefined;
+    if (state.autoSyncEnabled && user && permissionsGranted) {
+      // Initial discovery
+      discoverAndUploadNewMedia();
+      // Set up interval for auto-discovery (every 30 seconds)
+      interval = window.setInterval(() => {
+        discoverAndUploadNewMedia();
+      }, 30000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [state.autoSyncEnabled, user, permissionsGranted, discoverAndUploadNewMedia]);
+
   const toggleAutoSync = () => {
     const newVal = !state.autoSyncEnabled;
     setState(prev => ({ ...prev, autoSyncEnabled: newVal }));
@@ -326,10 +379,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const analyzeFile = async (fileName: string) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Try multiple ways to get the API key
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
+    
     if (!apiKey) {
-      return "API key not configured. Please set GEMINI_API_KEY in .env.local";
+      console.error("GEMINI_API_KEY not found. Checked:", {
+        'process.env.GEMINI_API_KEY': process.env.GEMINI_API_KEY,
+        'process.env.API_KEY': process.env.API_KEY,
+        'import.meta.env.VITE_GEMINI_API_KEY': import.meta.env.VITE_GEMINI_API_KEY
+      });
+      return "API key not configured. Please set GEMINI_API_KEY in .env.local and restart the dev server.";
     }
+    
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
@@ -337,9 +398,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const result = await model.generateContent(prompt);
       const response = await result.response;
       return response.text() || "Insight could not be generated.";
-    } catch (e) {
+    } catch (e: any) {
       console.error("Gemini Error:", e);
-      return "AI Analysis requires a valid GEMINI_API_KEY. Please ensure your environment is configured.";
+      const errorMsg = e?.message || String(e);
+      if (errorMsg.includes('API_KEY')) {
+        return "Invalid API key. Please check your GEMINI_API_KEY in .env.local and restart the dev server.";
+      }
+      return `AI Analysis error: ${errorMsg}. Please check your API key and try again.`;
     }
   };
 

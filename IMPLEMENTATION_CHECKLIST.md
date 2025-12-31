@@ -158,3 +158,4 @@ For complete functionality:
 
 **Next Step**: Start with **GEMINI_API_KEY** - that's the minimum to get AI features working!
 
+

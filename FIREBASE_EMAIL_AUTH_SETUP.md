@@ -105,3 +105,4 @@ After enabling Email/Password in Firebase Console:
 
 **Once you enable Email/Password in Firebase Console, everything will work!** 🎉
 
+

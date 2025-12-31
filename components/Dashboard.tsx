@@ -46,7 +46,6 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-left">
               <span className="block font-bold text-slate-800 text-lg">CS Library</span>
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{state.files.filter(f => f.category === 'CS').length} Resources</span>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-600 transition-colors" />
@@ -62,7 +61,6 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-left">
               <span className="block font-bold text-slate-800 text-lg">Mastery Vault</span>
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{state.files.filter(f => f.category === 'MASTERY').length} Items</span>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-violet-600 transition-colors" />
@@ -78,7 +76,6 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-left">
               <span className="block font-bold text-slate-800 text-lg">Media Vault</span>
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{state.media.length} Photos</span>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-600 transition-colors" />
@@ -96,9 +93,7 @@ const Dashboard: React.FC = () => {
             <h4 className="text-lg font-bold">Your Library</h4>
           </div>
           <p className="text-white/90 text-sm leading-relaxed">
-            {state.lastSyncTime 
-              ? `Last updated: ${new Date(state.lastSyncTime).toLocaleTimeString()}`
-              : 'Your personal collection of knowledge and resources.'}
+            Your personal collection of knowledge and resources.
           </p>
         </div>
       </div>

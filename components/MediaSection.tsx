@@ -59,12 +59,21 @@ const MediaSection: React.FC = () => {
             key={item.id} 
             className="aspect-square rounded-[24px] overflow-hidden relative group cursor-pointer shadow-sm active:scale-[0.97] transition-all bg-slate-100"
           >
-            <img 
-              src={item.url} 
-              alt="Media" 
-              className="w-full h-full object-cover transition-opacity duration-500" 
-              loading="lazy"
-            />
+            {item.type === 'video' ? (
+              <video 
+                src={item.url} 
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+              />
+            ) : (
+              <img 
+                src={item.url} 
+                alt="Media" 
+                className="w-full h-full object-cover transition-opacity duration-500" 
+                loading="lazy"
+              />
+            )}
             
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
             

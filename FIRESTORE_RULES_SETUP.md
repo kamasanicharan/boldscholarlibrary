@@ -42,3 +42,4 @@ service cloud.firestore {
 
 **Note**: You need to manually apply these in Firebase Console. I cannot access your Firebase Console directly.
 
+

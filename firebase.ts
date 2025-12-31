@@ -8,7 +8,7 @@ import { getFirestore } from "firebase/firestore";
  * extracted from your screenshot.
  */
 const firebaseConfig = {
-  apiKey: "AIzaSyCLCHn9uY2Cyeb5PIvY1X5ycqZH3-mo1M",
+  apiKey: "AIzaSyClCHn9uY2CYyeb5PIvY1X5ycqZH3-mo1M",
   authDomain: "boldscholar-d3029.firebaseapp.com",
   projectId: "boldscholar-d3029",
   storageBucket: "boldscholar-d3029.firebasestorage.app",

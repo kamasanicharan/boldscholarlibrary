@@ -163,7 +163,13 @@ const AppContent: React.FC = () => {
                 </div>
               )}
 
-              <button className="w-full p-4 flex items-center justify-between rounded-3xl bg-slate-50 hover:bg-indigo-50 transition-colors">
+              <button 
+                onClick={() => {
+                  // Account settings functionality
+                  alert('Account Settings\n\n• Name: ' + user.name + '\n• Email: ' + user.email + '\n• Storage: ' + (user.accessToken ? 'Enhanced (Google Drive)' : 'Standard (Firestore only)') + '\n\nMore settings coming soon!');
+                }}
+                className="w-full p-4 flex items-center justify-between rounded-3xl bg-slate-50 hover:bg-indigo-50 transition-colors"
+              >
                 <div className="flex items-center gap-3">
                   <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-600"><Settings className="w-5 h-5" /></div>
                   <span className="font-bold text-slate-700 text-base">Account Settings</span>
