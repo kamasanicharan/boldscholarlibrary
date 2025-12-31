@@ -2,12 +2,9 @@
 import React from 'react';
 import { 
   Play,
-  Heart,
   ShieldAlert,
   Image as ImageIcon,
-  Lock,
-  CloudUpload,
-  CheckCircle2
+  Lock
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
@@ -43,8 +40,6 @@ const MediaSection: React.FC = () => {
     );
   }
 
-  const isUploadingAny = state.media.some(m => m.syncStatus === 'uploading');
-
   return (
     <div className="flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
       <div className="px-6 pt-6 pb-2 flex items-center justify-between">
@@ -57,18 +52,6 @@ const MediaSection: React.FC = () => {
         )}
       </div>
 
-      {isUploadingAny && (
-        <div className="mx-6 mb-4 p-4 bg-indigo-50 rounded-2xl flex items-center justify-between border border-indigo-100 animate-pulse">
-          <div className="flex items-center gap-3">
-            <CloudUpload className="w-5 h-5 text-indigo-600" />
-            <span className="text-xs font-bold text-indigo-800">New mobile discovery uploading...</span>
-          </div>
-          <div className="w-12 h-1 bg-indigo-200 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-600 animate-[loading_2s_ease-in-out_infinite]" />
-          </div>
-        </div>
-      )}
-
       {/* Media Grid */}
       <div className="px-4 grid grid-cols-2 gap-2 pb-24">
         {state.media.map((item) => (
@@ -79,7 +62,7 @@ const MediaSection: React.FC = () => {
             <img 
               src={item.url} 
               alt="Media" 
-              className={`w-full h-full object-cover transition-opacity duration-500 ${item.syncStatus === 'uploading' ? 'opacity-40 grayscale' : 'opacity-100 grayscale-0'}`} 
+              className="w-full h-full object-cover transition-opacity duration-500" 
               loading="lazy"
             />
             
@@ -89,38 +72,21 @@ const MediaSection: React.FC = () => {
               <span className="text-[9px] text-white font-black uppercase tracking-wider drop-shadow-sm">
                 {item.source}
               </span>
-              {item.syncStatus === 'synced' ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              ) : (
-                <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-              )}
             </div>
 
-            {item.type === 'video' && item.syncStatus === 'synced' && (
+            {item.type === 'video' && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20">
                   <Play className="w-4 h-4 fill-current ml-0.5" />
                 </div>
               </div>
             )}
-
-            {item.syncStatus === 'uploading' && (
-              <div className="absolute inset-x-4 bottom-8 h-1 bg-white/20 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-white transition-all duration-300" 
-                  style={{ width: `${item.progress}%` }} 
-                />
-              </div>
-            )}
           </div>
         ))}
 
-        {state.isSyncing && Array.from({ length: 4 }).map((_, i) => (
-          <div key={`loading-${i}`} className="aspect-square rounded-[24px] bg-slate-200 animate-pulse" />
-        ))}
       </div>
 
-      {state.media.length === 0 && !state.isSyncing && (
+      {state.media.length === 0 && (
         <div className="flex flex-col items-center justify-center py-32 px-10 text-center">
           <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mb-4">
             <ImageIcon className="w-8 h-8 text-slate-200" />
