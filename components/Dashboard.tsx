@@ -2,16 +2,22 @@
 import React from 'react';
 import { 
   FileText,
+  Plus,
   BookOpen,
   Image as ImageIcon,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Cloud,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AppSection } from '../types';
 
 const Dashboard: React.FC = () => {
   const { user, setActiveSection, state, fetchCloudData } = useAppContext();
+
+  const isConfigured = !state.lastSyncTime?.includes("error");
 
   return (
     <div className="p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -28,7 +34,6 @@ const Dashboard: React.FC = () => {
           onClick={fetchCloudData}
           disabled={state.isSyncing}
           className="p-4 bg-white rounded-3xl border border-slate-100 shadow-sm text-slate-400 active:scale-90 transition-all disabled:opacity-50"
-          title="Refresh Library"
         >
           <RefreshCw className={`w-6 h-6 ${state.isSyncing ? 'animate-spin text-indigo-600' : ''}`} />
         </button>
@@ -46,6 +51,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-left">
               <span className="block font-bold text-slate-800 text-lg">CS Library</span>
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{state.files.filter(f => f.category === 'CS').length} Resources</span>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-600 transition-colors" />
@@ -61,6 +67,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-left">
               <span className="block font-bold text-slate-800 text-lg">Mastery Vault</span>
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{state.files.filter(f => f.category === 'MASTERY').length} Items</span>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-violet-600 transition-colors" />
@@ -76,26 +83,38 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-left">
               <span className="block font-bold text-slate-800 text-lg">Media Vault</span>
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{state.media.length} Photos</span>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-600 transition-colors" />
         </button>
       </div>
 
-      {/* Library Status */}
-      <div className="rounded-[32px] p-6 bg-gradient-to-br from-indigo-600 to-violet-700 text-white relative overflow-hidden shadow-xl">
+      {/* Connection Status Info */}
+      <div className={`rounded-[32px] p-6 text-white relative overflow-hidden transition-colors ${isConfigured ? 'bg-slate-900' : 'bg-amber-600'}`}>
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl rounded-full translate-x-10 -translate-y-10" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-white/20 rounded-xl">
-              <BookOpen className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/10 rounded-xl">
+              <Cloud className="w-5 h-5 text-white" />
             </div>
-            <h4 className="text-lg font-bold">Your Library</h4>
+            <h4 className="text-lg font-bold">Cloud Connectivity</h4>
           </div>
-          <p className="text-white/90 text-sm leading-relaxed">
-            Your personal collection of knowledge and resources.
-          </p>
+          {state.isSyncing ? (
+            <RefreshCw className="w-4 h-4 animate-spin text-white/50" />
+          ) : isConfigured ? (
+            <CheckCircle className="w-5 h-5 text-emerald-400" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-amber-200" />
+          )}
         </div>
+        <p className="text-white/70 text-sm leading-relaxed">
+          {state.isSyncing 
+            ? 'Establishing secure link...' 
+            : state.lastSyncTime 
+              ? `Connected: ${new Date(state.lastSyncTime).toLocaleTimeString()}`
+              : 'App is currently in local-only mode. Finish Firebase setup to enable cloud syncing.'}
+        </p>
       </div>
     </div>
   );

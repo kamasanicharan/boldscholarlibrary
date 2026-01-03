@@ -4,6 +4,8 @@ import {
   BookOpen, 
   Sparkles, 
   Search, 
+  UploadCloud, 
+  ExternalLink,
   ChevronRight,
   BrainCircuit
 } from 'lucide-react';
@@ -38,7 +40,7 @@ const MasterySection: React.FC = () => {
             onClick={() => fileInputRef.current?.click()}
             className="bg-white text-indigo-600 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-black/10 active:scale-95 transition-transform"
           >
-            <BookOpen className="w-5 h-5" /> Add to Library
+            <UploadCloud className="w-5 h-5" /> Upload Notes
           </button>
           <input 
             type="file" 

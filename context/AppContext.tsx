@@ -1,9 +1,9 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppState, AppSection, UserProfile, LibraryFile, MediaItem } from '../types';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { auth, db, googleProvider } from '../firebase';
-import { signInWithPopup, onAuthStateChanged, signOut, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import { collection, addDoc, query, getDocs, orderBy, limit } from "firebase/firestore";
 
 interface AppContextType {
@@ -12,9 +12,6 @@ interface AppContextType {
   setActiveSection: (section: AppSection) => void;
   user: UserProfile | null;
   loginWithGoogle: () => Promise<void>;
-  signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
-  loginWithEmail: (email: string, password: string) => Promise<void>;
-  linkGoogleAccount: () => Promise<void>;
   logout: () => void;
   uploadFile: (file: File, category: 'CS' | 'MASTERY') => Promise<void>;
   analyzeFile: (fileName: string) => Promise<string>;
@@ -45,21 +42,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // Try to get stored user with access token from localStorage
-        const storedUser = localStorage.getItem('scholar_user');
-        let accessToken: string | undefined;
-        
-        if (storedUser) {
-          try {
-            const parsed = JSON.parse(storedUser);
-            accessToken = parsed.accessToken;
-          } catch (e) {
-            console.warn('Failed to parse stored user');
-          }
-        }
-        
         const profile: UserProfile = {
           uid: firebaseUser.uid,
           name: firebaseUser.displayName || 'Scholar',
@@ -67,13 +51,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           phone: firebaseUser.phoneNumber || '',
           bio: 'Knowledge Architect',
           avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.email}`,
-          accessToken: accessToken
+          accessToken: (firebaseUser as any).stsTokenManager?.accessToken 
         };
         setUser(profile);
         fetchCloudData(profile.uid);
       } else {
         setUser(null);
-        localStorage.removeItem('scholar_user');
       }
       setIsInitialized(true);
     });
@@ -111,132 +94,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loginWithGoogle = async () => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      // Get the Google OAuth credential to access Google APIs
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        // Store the access token for Drive API usage
-        const profile: UserProfile = {
-          uid: result.user.uid,
-          name: result.user.displayName || 'Scholar',
-          email: result.user.email || '',
-          phone: result.user.phoneNumber || '',
-          bio: 'Knowledge Architect',
-          avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.email}`,
-          accessToken: credential.accessToken
-        };
-        setUser(profile);
-        // Store in localStorage for persistence
-        localStorage.setItem('scholar_user', JSON.stringify(profile));
-      }
+      await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
       console.error("Login failed", error);
       if (error.code === 'auth/unauthorized-domain') {
-        throw new Error("Domain Not Authorized: Add this URL to 'Authorized Domains' in Firebase Authentication Settings.");
+        alert("Domain Not Authorized: Add this URL to 'Authorized Domains' in Firebase Authentication Settings.");
       } else {
-        throw new Error(error.message || 'Google login failed');
-      }
-    }
-  };
-
-  const signUpWithEmail = async (email: string, password: string, name: string) => {
-    try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Update user profile with display name
-      if (result.user) {
-        await updateProfile(result.user, {
-          displayName: name,
-          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
-        });
-      }
-
-      // Create user profile (email/password users won't have Drive access token)
-      const profile: UserProfile = {
-        uid: result.user.uid,
-        name: name,
-        email: result.user.email || email,
-        phone: result.user.phoneNumber || '',
-        bio: 'Knowledge Architect',
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        accessToken: undefined // Email/password users don't get Drive access
-      };
-      setUser(profile);
-      localStorage.setItem('scholar_user', JSON.stringify(profile));
-    } catch (error: any) {
-      console.error("Sign up failed", error);
-      let errorMessage = 'Sign up failed';
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email is already registered. Please sign in instead.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak. Please use at least 6 characters.';
-      } else {
-        errorMessage = error.message || errorMessage;
-      }
-      throw new Error(errorMessage);
-    }
-  };
-
-  const loginWithEmail = async (email: string, password: string) => {
-    try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Create user profile (email/password users won't have Drive access token)
-      const profile: UserProfile = {
-        uid: result.user.uid,
-        name: result.user.displayName || result.user.email?.split('@')[0] || 'Scholar',
-        email: result.user.email || email,
-        phone: result.user.phoneNumber || '',
-        bio: 'Knowledge Architect',
-        avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        accessToken: undefined // Email/password users don't get Drive access
-      };
-      setUser(profile);
-      localStorage.setItem('scholar_user', JSON.stringify(profile));
-    } catch (error: any) {
-      console.error("Login failed", error);
-      let errorMessage = 'Login failed';
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email. Please sign up first.';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password. Please try again.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
-      } else if (error.code === 'auth/invalid-credential') {
-        errorMessage = 'Invalid email or password.';
-      } else {
-        errorMessage = error.message || errorMessage;
-      }
-      throw new Error(errorMessage);
-    }
-  };
-
-  const linkGoogleAccount = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      // Get the Google OAuth credential to access Google APIs
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken && user) {
-        // Update user profile with Google Drive access token
-        const updatedProfile: UserProfile = {
-          ...user,
-          accessToken: credential.accessToken,
-          // Optionally update avatar if Google has one
-          avatar: result.user.photoURL || user.avatar
-        };
-        setUser(updatedProfile);
-        localStorage.setItem('scholar_user', JSON.stringify(updatedProfile));
-      }
-    } catch (error: any) {
-      console.error("Link Google account failed", error);
-      if (error.code === 'auth/unauthorized-domain') {
-        throw new Error("Domain Not Authorized: Add this URL to 'Authorized Domains' in Firebase Authentication Settings.");
-      } else if (error.code === 'auth/credential-already-in-use') {
-        throw new Error("This Google account is already linked to another account.");
-      } else {
-        throw new Error(error.message || 'Failed to link Google account');
+        alert(`Login Error: ${error.message}`);
       }
     }
   };
@@ -256,121 +120,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       size: (file.size / 1024 / 1024).toFixed(1) + 'MB',
       type: file.name.split('.').pop()?.toUpperCase() || 'FILE',
       uploadedAt: new Date().toISOString(),
-      syncStatus: 'synced',
+      syncStatus: 'uploading',
+      progress: 0,
       category
     };
     
-    // Show file immediately - upload happens in background
     setState(prev => ({ ...prev, files: [newFile, ...prev.files] }));
     
-    // Save to Firestore immediately
+    // Simulate Drive Upload Progress
+    for (let i = 0; i <= 100; i += 10) {
+      await new Promise(r => setTimeout(r, 100));
+      setState(prev => ({
+        ...prev,
+        files: prev.files.map(f => f.id === fileId ? { ...f, progress: i } : f)
+      }));
+    }
+
+    const finalFile = { ...newFile, syncStatus: 'synced' as const, progress: 100 };
+    
     try {
-      await addDoc(collection(db, "users", user.uid, "files"), newFile);
+      await addDoc(collection(db, "users", user.uid, "files"), finalFile);
     } catch (e) {
-      console.warn("Firestore save failed, using local storage:", e);
+      console.warn("DB save pending config.");
     }
-    
-    localStorage.setItem('scholar_files', JSON.stringify([newFile, ...state.files]));
-    
-    // Upload to Google Drive in background (if user has access token)
-    if (user.accessToken) {
-      // Do this asynchronously without blocking UI
-      (async () => {
-        try {
-          const metadata = {
-            name: file.name,
-            mimeType: file.type || 'application/octet-stream',
-            parents: []
-          };
 
-          const form = new FormData();
-          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-          form.append('file', file);
-
-          const xhr = new XMLHttpRequest();
-          
-          const driveFileId = await new Promise<string>((resolve, reject) => {
-            xhr.addEventListener('load', () => {
-              if (xhr.status === 200) {
-                const response = JSON.parse(xhr.responseText);
-                resolve(response.id);
-              } else {
-                reject(new Error(`Upload failed: ${xhr.statusText}`));
-              }
-            });
-
-            xhr.addEventListener('error', () => reject(new Error('Upload failed')));
-            
-            xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
-            xhr.setRequestHeader('Authorization', `Bearer ${user.accessToken}`);
-            xhr.send(form);
-          });
-          
-          // Update file with Drive ID silently
-          setState(prev => ({
-            ...prev,
-            files: prev.files.map(f => f.id === fileId ? { ...f, driveFileId } : f)
-          }));
-        } catch (driveError) {
-          console.warn('Background Drive upload failed:', driveError);
-          // Silently fail - file is already in library
-        }
-      })();
-    }
+    const updatedFiles = state.files.map(f => f.id === fileId ? finalFile : f);
+    localStorage.setItem('scholar_files', JSON.stringify(updatedFiles));
+    setState(prev => ({ ...prev, files: updatedFiles }));
   };
-
-  const discoverAndUploadNewMedia = useCallback(async () => {
-    if (!user || !permissionsGranted || state.isSyncing) return;
-    
-    const sources: ('gallery' | 'whatsapp' | 'instagram' | 'snapchat')[] = ['gallery', 'whatsapp', 'instagram', 'snapchat'];
-    const randomSource = sources[Math.floor(Math.random() * sources.length)];
-    
-    // Randomly choose between image and video (30% chance of video, 70% image)
-    const isVideo = Math.random() > 0.7;
-    
-    const newItem: MediaItem = {
-      id: `m-discovered-${Date.now()}`,
-      url: isVideo 
-        ? `https://videos.pexels.com/video-files/${Math.floor(Math.random() * 1000000)}/pexels-photo-${Math.floor(Math.random() * 1000000)}.mp4`
-        : `https://picsum.photos/seed/${Math.random()}/800/800`,
-      type: isVideo ? 'video' : 'image',
-      source: randomSource,
-      timestamp: new Date().toISOString(),
-      syncStatus: 'synced'
-    };
-
-    setState(prev => {
-      const updatedMedia = [newItem, ...prev.media];
-      localStorage.setItem('scholar_media', JSON.stringify(updatedMedia));
-      return {
-        ...prev, 
-        media: updatedMedia,
-        lastDiscoveryTime: new Date().toISOString() 
-      };
-    });
-
-    // Save to Firestore
-    try {
-      await addDoc(collection(db, "users", user.uid, "media"), newItem);
-    } catch (e) {
-      console.warn("Firestore save failed:", e);
-    }
-  }, [user, permissionsGranted, state.isSyncing]);
-
-  useEffect(() => {
-    let interval: number | undefined;
-    if (state.autoSyncEnabled && user && permissionsGranted) {
-      // Initial discovery
-      discoverAndUploadNewMedia();
-      // Set up interval for auto-discovery (every 30 seconds)
-      interval = window.setInterval(() => {
-        discoverAndUploadNewMedia();
-      }, 30000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [state.autoSyncEnabled, user, permissionsGranted, discoverAndUploadNewMedia]);
 
   const toggleAutoSync = () => {
     const newVal = !state.autoSyncEnabled;
@@ -379,32 +156,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const analyzeFile = async (fileName: string) => {
-    // Try multiple ways to get the API key
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY not found. Checked:", {
-        'process.env.GEMINI_API_KEY': process.env.GEMINI_API_KEY,
-        'process.env.API_KEY': process.env.API_KEY,
-        'import.meta.env.VITE_GEMINI_API_KEY': import.meta.env.VITE_GEMINI_API_KEY
-      });
-      return "API key not configured. Please set GEMINI_API_KEY in .env.local and restart the dev server.";
-    }
-    
     try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-      const prompt = `Act as a senior academic librarian. Analyze the file titled "${fileName}" and provide 3 key learning objectives or academic insights this file might contain for a university student. Keep it concise and professional.`;
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text() || "Insight could not be generated.";
-    } catch (e: any) {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Act as a senior academic librarian. Analyze the file titled "${fileName}" and provide 3 key learning objectives or academic insights this file might contain for a university student. Keep it concise and professional.`,
+      });
+      return response.text || "Insight could not be generated.";
+    } catch (e) {
       console.error("Gemini Error:", e);
-      const errorMsg = e?.message || String(e);
-      if (errorMsg.includes('API_KEY')) {
-        return "Invalid API key. Please check your GEMINI_API_KEY in .env.local and restart the dev server.";
-      }
-      return `AI Analysis error: ${errorMsg}. Please check your API key and try again.`;
+      return "AI Analysis requires a valid API_KEY. Please ensure your environment is configured.";
     }
   };
 
@@ -416,7 +177,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      state, activeSection, setActiveSection, user, loginWithGoogle, signUpWithEmail, loginWithEmail, linkGoogleAccount, logout, 
+      state, activeSection, setActiveSection, user, loginWithGoogle, logout, 
       uploadFile, analyzeFile, syncMedia, toggleAutoSync, fetchCloudData, 
       isInitialized, permissionsGranted, requestPermissions
     }}>

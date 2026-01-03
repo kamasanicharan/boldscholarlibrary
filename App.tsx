@@ -2,14 +2,12 @@
 import React, { useState } from 'react';
 import { 
   BookOpen, 
+  User as UserIcon, 
   Settings, 
   LogOut,
   ChevronRight,
   RefreshCw,
-  Zap,
-  Chrome,
-  CheckCircle2,
-  AlertCircle
+  Zap
 } from 'lucide-react';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { AppSection } from './types';
@@ -23,10 +21,8 @@ import Login from './components/Login';
 import Navigation from './components/Navigation';
 
 const AppContent: React.FC = () => {
-  const { state, activeSection, setActiveSection, user, logout, toggleAutoSync, linkGoogleAccount } = useAppContext();
+  const { state, activeSection, setActiveSection, user, logout, toggleAutoSync } = useAppContext();
   const [showProfile, setShowProfile] = useState(false);
-  const [isLinkingGoogle, setIsLinkingGoogle] = useState(false);
-  const [linkError, setLinkError] = useState('');
 
   if (!user) {
     return <Login />;
@@ -101,75 +97,7 @@ const AppContent: React.FC = () => {
                 </button>
               </div>
 
-              {/* Google Drive Access Status */}
-              {!user.accessToken && (
-                <div className="w-full p-4 rounded-3xl bg-amber-50 border border-amber-100 mb-3">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="p-2 rounded-xl bg-amber-100 text-amber-600">
-                      <AlertCircle className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="block font-bold text-amber-800 text-sm mb-1">Enhanced Storage Available</span>
-                      <span className="text-xs text-amber-600">Link your Google account for expanded library storage</span>
-                    </div>
-                  </div>
-                  {linkError && (
-                    <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs">
-                      {linkError}
-                    </div>
-                  )}
-                  <button
-                    onClick={async () => {
-                      setIsLinkingGoogle(true);
-                      setLinkError('');
-                      try {
-                        await linkGoogleAccount();
-                        setLinkError('');
-                      } catch (err: any) {
-                        setLinkError(err.message || 'Failed to link Google account');
-                      } finally {
-                        setIsLinkingGoogle(false);
-                      }
-                    }}
-                    disabled={isLinkingGoogle}
-                    className="w-full py-2.5 px-4 bg-amber-600 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isLinkingGoogle ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Linking...
-                      </>
-                    ) : (
-                      <>
-                        <Chrome className="w-4 h-4" />
-                        Link Google Account
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {user.accessToken && (
-                <div className="w-full p-4 rounded-3xl bg-emerald-50 border border-emerald-100 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="block font-bold text-emerald-800 text-sm">Enhanced Storage Active</span>
-                      <span className="text-xs text-emerald-600">Your library has expanded storage capacity</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <button 
-                onClick={() => {
-                  // Account settings functionality
-                  alert('Account Settings\n\n• Name: ' + user.name + '\n• Email: ' + user.email + '\n• Storage: ' + (user.accessToken ? 'Enhanced (Google Drive)' : 'Standard (Firestore only)') + '\n\nMore settings coming soon!');
-                }}
-                className="w-full p-4 flex items-center justify-between rounded-3xl bg-slate-50 hover:bg-indigo-50 transition-colors"
-              >
+              <button className="w-full p-4 flex items-center justify-between rounded-3xl bg-slate-50 hover:bg-indigo-50 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-600"><Settings className="w-5 h-5" /></div>
                   <span className="font-bold text-slate-700 text-base">Account Settings</span>
